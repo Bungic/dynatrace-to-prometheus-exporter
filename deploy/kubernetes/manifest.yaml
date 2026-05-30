@@ -1,0 +1,88 @@
+---
+apiVersion: v1
+kind: Secret
+metadata:
+  name: dynatrace-exporter-credentials
+type: Opaque
+stringData:
+  api-url: "https://YOUR_ENV.live.dynatrace.com/api/v2/metrics/query"
+  api-token: "dt0c01.REPLACE_ME"
+---
+apiVersion: apps/v1
+kind: Deployment
+metadata:
+  name: dynatrace-exporter
+  labels:
+    app: dynatrace-exporter
+spec:
+  replicas: 1
+  selector:
+    matchLabels:
+      app: dynatrace-exporter
+  template:
+    metadata:
+      labels:
+        app: dynatrace-exporter
+    spec:
+      containers:
+        - name: exporter
+          image: <your-registry>/dynatrace-exporter:1.0.0
+          imagePullPolicy: IfNotPresent
+          ports:
+            - name: metrics
+              containerPort: 8000
+          env:
+            - name: DYNATRACE_API_URL
+              valueFrom:
+                secretKeyRef:
+                  name: dynatrace-exporter-credentials
+                  key: api-url
+            - name: DYNATRACE_API_TOKEN
+              valueFrom:
+                secretKeyRef:
+                  name: dynatrace-exporter-credentials
+                  key: api-token
+            # - name: ENTITY_SELECTOR
+            #   value: "type(HOST),tag(env:prod)"
+          readinessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 10
+            periodSeconds: 10
+          livenessProbe:
+            httpGet:
+              path: /healthz
+              port: metrics
+            initialDelaySeconds: 30
+            periodSeconds: 30
+          resources:
+            requests:
+              cpu: 10m
+              memory: 32Mi
+            limits:
+              cpu: 100m
+              memory: 64Mi
+          securityContext:
+            allowPrivilegeEscalation: false
+            readOnlyRootFilesystem: true
+            runAsNonRoot: true
+            runAsUser: 65532
+            capabilities:
+              drop:
+                - ALL
+---
+apiVersion: v1
+kind: Service
+metadata:
+  name: dynatrace-exporter
+  labels:
+    app: dynatrace-exporter
+spec:
+  type: ClusterIP
+  ports:
+    - name: metrics
+      port: 8000
+      targetPort: metrics
+  selector:
+    app: dynatrace-exporter

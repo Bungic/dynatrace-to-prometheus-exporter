@@ -1,0 +1,22 @@
+# Build output
+dynatrace-exporter
+dynatrace_exporter
+exporter
+*.exe
+*.so
+*.dylib
+
+# Test artifacts
+*.test
+*.out
+coverage.txt
+
+# IDE
+.idea/
+.vscode/
+*.swp
+.DS_Store
+
+# Local secrets
+.env
+.env.local
